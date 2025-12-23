@@ -23,15 +23,7 @@ ln -sf ~/Integrations/basehub/zocms/zocms.ts /usr/local/bin/zocms
 cp ~/Integrations/basehub/zocms/zocms.prompt.md ~/Prompts/
 ```
 
-4. Add your BaseHub token:
-   - Go to [Settings > Developers](/settings#developers) in Zo
-   - Add `BASEHUB_MCP_TOKEN` with your token value
-
-### Getting Your Token
-
-1. Go to **BaseHub dashboard → Settings → API Access**
-2. Select **"Claude Code"** option
-3. Copy the token
+4. Set your BaseHub MCP token (copy from Claude Code MCP command)
 
 ## Updating
 
