@@ -56,15 +56,16 @@ async function query(gql: string): Promise<Record<string, unknown>> {
   return parsed;
 }
 
-const COLLECTIONS: Record<string, { path: string[]; bodyField: string }> = {
-  posts: { path: ["blog", "posts", "items"], bodyField: "body" },
-  tutorials: { path: ["tutorials", "tutorials", "items"], bodyField: "body" },
-  "use-cases": { path: ["useCases", "useCases", "items"], bodyField: "body" },
+const COLLECTIONS: Record<string, { path: string[]; bodyField: string; metaField?: string }> = {
+  posts: { path: ["blog", "posts", "items"], bodyField: "body", metaField: "excerpt" },
+  tutorials: { path: ["tutorials", "tutorials", "items"], bodyField: "body", metaField: "metaDescription" },
+  "use-cases": { path: ["useCases", "useCases", "items"], bodyField: "body", metaField: "metaDescription" },
   comparisons: {
     path: ["comparisons", "comparisons", "items"],
     bodyField: "body",
+    metaField: "metaDescription",
   },
-  features: { path: ["features", "features", "items"], bodyField: "body" },
+  features: { path: ["features", "features", "items"], bodyField: "body", metaField: "description" },
 };
 
 function getNested(obj: Record<string, unknown>, path: string[]): unknown[] {
@@ -185,11 +186,12 @@ async function fetchItem(id: string): Promise<{
   bodyField: string;
 } | null> {
   for (const [name, config] of Object.entries(COLLECTIONS)) {
+    const metaField = config.metaField || "metaDescription";
     const gqlPath = config.path
       .slice(0, -1)
       .reduceRight(
         (acc, key) => `${key} { ${acc} }`,
-        `items { _id _title _slug metaDescription ${config.bodyField} { markdown } }`,
+        `items { _id _title _slug ${metaField} ${config.bodyField} { markdown } }`,
       );
 
     try {
@@ -197,7 +199,7 @@ async function fetchItem(id: string): Promise<{
       const items = getNested(data, config.path) as Record<string, unknown>[];
       const item = items.find((i) => i._id === id);
       if (item) return { name, item, bodyField: config.bodyField };
-    } catch {
+    } catch (e) {
       // Try next collection
     }
   }
@@ -215,7 +217,8 @@ function itemToMarkdown(
     _title: item._title,
   };
   if (item._slug) fm._slug = item._slug;
-  if (item.metaDescription) fm.metaDescription = item.metaDescription;
+  const metaField = (COLLECTIONS[name] as any).metaField || "metaDescription";
+  if (item[metaField]) fm[metaField] = item[metaField];
 
   const bodyObj = item[bodyField] as { markdown?: string } | undefined;
   const body = bodyObj?.markdown || "";
@@ -275,8 +278,9 @@ async function push(filepath: string) {
 
   const value: Record<string, unknown> = {};
 
-  if (fm.metaDescription) {
-    value.metaDescription = { type: "text", value: fm.metaDescription };
+  const metaField = (config as any).metaField || "metaDescription";
+  if (fm[metaField]) {
+    value[metaField] = { type: "text", value: fm[metaField] };
   }
 
   if (body.trim()) {
