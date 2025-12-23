@@ -1,6 +1,6 @@
 # zocms
 
-BaseHub CLI for syncing content via MCP.
+CLI for updating Zo CMS content on Basehub
 
 ## Installation
 
@@ -32,7 +32,7 @@ zocms update
 | `zocms list <collection>` | List items as: title \| id |
 | `zocms get <id>` | Download item → `slug.md` |
 | `zocms push <file.md>` | Push and publish directly (auto-commits) |
-| `zocms refresh <file.md>` | Pull published version (overwrites local) |
+| `zocms refresh <file.md>` | Pull published version (overwrites local). Ignores draft! |
 | `zocms update` | Update CLI to latest version from source |
 
 ## Collections
@@ -52,14 +52,13 @@ zocms list posts
 # Download it
 zocms get abc123   # saves as e.g. personal-ai.md
 
+# Pull latest from BaseHub before editing (overwrites local)
+zocms refresh personal-ai.md
+
 # Edit the markdown...
-vim personal-ai.md
 
 # Push changes back
 zocms push personal-ai.md
-
-# Pull latest from BaseHub (overwrites local)
-zocms refresh personal-ai.md
 ```
 
 
