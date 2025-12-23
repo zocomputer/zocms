@@ -1,0 +1,26 @@
+{
+  "name": "zo-basehub",
+  "version": "1.0.0",
+  "description": "BaseHub CLI - sync content via MCP",
+  "module": "zocms.ts",
+  "type": "module",
+  "bin": {
+    "zocms": "./zocms.ts"
+  },
+  "scripts": {
+    "dev": "bun basehub.ts",
+    "link": "bun link",
+    "update": "git pull && bun link"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/benguo/zo-basehub.git"
+  },
+  "keywords": ["basehub", "cms", "cli", "mcp"],
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
