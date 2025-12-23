@@ -23,7 +23,8 @@ Use this prompt to interact with BaseHub collections (posts, tutorials, use-case
 
 ## Setup
 
-Ensure `BASEHUB_MCP_TOKEN` is set in [Settings > Developers](/settings#developers).
+- Make sure the repo is installed as an Integration: https://github.com/zocomputer/zocms
+- Ensure the user has set `BASEHUB_MCP_TOKEN` in [Settings > Developers](/settings#developers)
 
 ## Commands Summary
 
