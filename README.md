@@ -1,29 +1,44 @@
 # zocms
 
-CLI for updating Zo CMS content on Basehub
+CLI for managing BaseHub CMS content.
 
 ## Installation
 
+### On Zo Computer
+
+1. Clone the repo to your Integrations directory:
 ```bash
-git clone https://github.com/benguo/zo-basehub.git
-cd zo-basehub
-bun link
+mkdir -p ~/Integrations/basehub
+cd ~/Integrations/basehub
+git clone https://github.com/zocomputer/zocms.git
 ```
 
-Now `zocms` is available globally.
+2. Create a global symlink:
+```bash
+ln -sf ~/Integrations/basehub/zocms/zocms.ts /usr/local/bin/zocms
+```
+
+3. Copy the prompt tool to your Prompts directory:
+```bash
+cp ~/Integrations/basehub/zocms/zocms.prompt.md ~/Prompts/
+```
+
+4. Add your BaseHub token:
+   - Go to [Settings > Developers](/settings#developers) in Zo
+   - Add `BASEHUB_MCP_TOKEN` with your token value
+
+### Getting Your Token
+
+1. Go to **BaseHub dashboard → Settings → API Access**
+2. Select **"Claude Code"** option
+3. Copy the token
 
 ## Updating
 
 ```bash
+cd ~/Integrations/basehub/zocms
 git pull
-zocms update
 ```
-
-## Setup
-
-1. Go to **BaseHub dashboard → Settings → API Access**
-2. Select **"Claude Code"** option
-3. Copy the token from the command & add to env (BASEHUB_MCP_TOKEN)
 
 ## Commands
 
@@ -31,9 +46,9 @@ zocms update
 |---------|-------------|
 | `zocms list <collection>` | List items as: title \| id |
 | `zocms get <id>` | Download item → `slug.md` |
-| `zocms push <file.md>` | Push and publish directly (auto-commits) |
-| `zocms refresh <file.md>` | Pull published version (overwrites local). Ignores draft! |
-| `zocms update` | Update CLI to latest version from source |
+| `zocms push <file.md>` | Push and publish directly |
+| `zocms refresh <file.md>` | Pull published version (overwrites local) |
+| `zocms update` | Update CLI to latest version |
 
 ## Collections
 
@@ -52,7 +67,7 @@ zocms list posts
 # Download it
 zocms get abc123   # saves as e.g. personal-ai.md
 
-# Pull latest from BaseHub before editing (overwrites local)
+# Pull latest from BaseHub before editing
 zocms refresh personal-ai.md
 
 # Edit the markdown...
@@ -61,4 +76,13 @@ zocms refresh personal-ai.md
 zocms push personal-ai.md
 ```
 
+## Using with Zo
+
+Once the prompt tool is installed, you can use natural language:
+
+> "List all blog posts"
+> "Pull the latest version of the personal-ai post"
+> "Push my changes to the features article"
+
+Zo will use the zocms CLI automatically.
 
