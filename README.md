@@ -13,9 +13,10 @@ cd ~/Integrations
 git clone https://github.com/zocomputer/zocms.git
 ```
 
-2. Create a global symlink:
+2. Compile and install the binary:
 ```bash
-ln -sf ~/Integrations/zocms/zocms.ts /usr/local/bin/zocms
+cd ~/Integrations/zocms
+bun build --compile ./zocms.ts --outfile /usr/local/bin/zocms
 ```
 
 3. Copy the prompt tool to your Prompts directory:
@@ -28,6 +29,7 @@ cp ~/Integrations/zocms/zocms.prompt.md ~/Prompts/
 ```bash
 cd ~/Integrations/zocms
 git pull
+bun build --compile ./zocms.ts --outfile /usr/local/bin/zocms
 ```
 
 ## Commands
@@ -75,4 +77,5 @@ Once the prompt tool is installed, you can use natural language:
 > "Push my changes to the features article"
 
 Zo will use the zocms CLI automatically.
+
 
