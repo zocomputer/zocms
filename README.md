@@ -8,27 +8,25 @@ CLI for managing BaseHub CMS content.
 
 1. Clone the repo to your Integrations directory:
 ```bash
-mkdir -p ~/Integrations/basehub
-cd ~/Integrations/basehub
+mkdir -p ~/Integrations
+cd ~/Integrations
 git clone https://github.com/zocomputer/zocms.git
 ```
 
 2. Create a global symlink:
 ```bash
-ln -sf ~/Integrations/basehub/zocms/zocms.ts /usr/local/bin/zocms
+ln -sf ~/Integrations/zocms/zocms.ts /usr/local/bin/zocms
 ```
 
 3. Copy the prompt tool to your Prompts directory:
 ```bash
-cp ~/Integrations/basehub/zocms/zocms.prompt.md ~/Prompts/
+cp ~/Integrations/zocms/zocms.prompt.md ~/Prompts/
 ```
-
-4. Set your BaseHub MCP token (copy from Claude Code MCP command)
 
 ## Updating
 
 ```bash
-cd ~/Integrations/basehub/zocms
+cd ~/Integrations/zocms
 git pull
 ```
 
