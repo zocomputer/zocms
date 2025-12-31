@@ -1,39 +1,31 @@
 ---
-title: BaseHub CMS (zocms)
-description: Manage BaseHub content (pull, edit, push) using the zocms CLI.
+title: Tutorial CLI (zocms)
+description: Create and manage zo.computer tutorials using the zocms CLI.
 tags:
   - cms
-  - basehub
+  - tutorials
   - content
 tool: true
 ---
-Use this prompt to interact with BaseHub collections (posts, tutorials, use-cases, comparisons, features).
 
-## Workflow
+Use this prompt to create and manage tutorials for zo.computer.
 
-1. **List items** in a collection to find what to edit:
-   `zocms list <collection>`
-2. **Download** an item by its ID:
-   `zocms get <id>` (creates a `.md` file in the current directory)
-3. **Refresh** to ensure you have the latest published version:
-   `zocms refresh <filename.md>`
-4. **Edit** the content using `edit_file_llm`.
-5. **Push** the changes back to BaseHub:
-   `zocms push <filename.md>`
-
-## Setup
-
-- Make sure the repo is installed as an Integration: https://github.com/zocomputer/zocms
-- Ensure the user has set `BASEHUB_MCP_TOKEN` in [Settings > Developers](/settings#developers)
-
-## Commands Summary
+## Commands
 
 | Command | Description |
 |---------|-------------|
-| `zocms list <collection>` | List items as: title \| id |
-| `zocms get <id>` | Download item → `slug.md` |
-| `zocms push <file.md>` | Push and publish directly |
-| `zocms refresh <file.md>` | Overwrite local with published version |
+| `zocms new 'Title'` | Create new tutorial |
+| `zocms publish <file.md>` | Publish to BaseHub |
+| `zocms delete <file.md>` | Delete tutorial |
+| `zocms list` | List all tutorials |
 
+## Workflow
 
+1. **Create** a new tutorial: `zocms new 'How to Do Something'`
+2. **Edit** the generated markdown file
+3. **Publish** changes: `zocms publish how-to-do-something.md`
 
+## Setup
+
+- Install from: https://github.com/zocomputer/zocms
+- Set `BASEHUB_MCP_TOKEN` in Settings > Developers

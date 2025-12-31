@@ -1,7 +1,7 @@
 {
   "name": "zocms",
   "version": "1.0.0",
-  "description": "zo CMS CLI (basehub MCP)",
+  "description": "CLI for creating and managing zo.computer tutorials",
   "module": "zocms.ts",
   "type": "module",
   "bin": {

@@ -1,7 +1,12 @@
 #!/usr/bin/env bun
-/** zocms - BaseHub CLI for syncing content. See README.md for docs. */
+/** zocms - Tutorial CLI for zo.computer. See README.md for docs. */
 
 const MCP_URL = "https://basehub.com/api/mcp";
+
+// BaseHub IDs
+const TUTORIALS_PARENT_ID = "AKPiDEpK6mMxBjxDhXIze";
+const TUTORIAL_COMPONENT_ID = "23abd95a28d73ca760243";
+const BEN_AUTHOR_ID = "SbZsqGSzk8pcCBiIN227h";
 
 function getToken(): string {
   const token = process.env.BASEHUB_MCP_TOKEN;
@@ -44,10 +49,10 @@ async function mcpCall(
   return data.result;
 }
 
-async function query(gql: string): Promise<Record<string, unknown>> {
+async function query(gql: string, draft = true): Promise<Record<string, unknown>> {
   const result = (await mcpCall("tools/call", "query_content", {
     query: gql,
-    draft: false,
+    draft,
   })) as { content: { text: string }[] };
   const text = result.content?.[0]?.text;
   if (!text) throw new Error("No content in response");
@@ -56,34 +61,52 @@ async function query(gql: string): Promise<Record<string, unknown>> {
   return parsed;
 }
 
-const COLLECTIONS: Record<string, { path: string[]; bodyField: string; metaField?: string }> = {
-  posts: { path: ["blog", "posts", "items"], bodyField: "body", metaField: "excerpt" },
-  tutorials: { path: ["tutorials", "tutorials", "items"], bodyField: "body", metaField: "metaDescription" },
-  "use-cases": { path: ["useCases", "useCases", "items"], bodyField: "body", metaField: "metaDescription" },
-  comparisons: {
-    path: ["comparisons", "comparisons", "items"],
-    bodyField: "body",
-    metaField: "metaDescription",
-  },
-  features: { path: ["features", "features", "items"], bodyField: "body", metaField: "description" },
-};
-
-function getNested(obj: Record<string, unknown>, path: string[]): unknown[] {
-  let result: unknown = obj;
-  for (const key of path) {
-    if (!result || typeof result !== "object") return [];
-    result = (result as Record<string, unknown>)[key];
-  }
-  return Array.isArray(result) ? result : [];
-}
+// ─────────────────────────────────────────────────────────────────────────────
+// Utilities
+// ─────────────────────────────────────────────────────────────────────────────
 
 function slugify(title: string): string {
   return title
     .toLowerCase()
-    .split(/\s+/)
-    .slice(0, 2)
-    .join("-")
-    .replace(/[^a-z0-9-]/g, "");
+    .replace(/[^a-z0-9\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-");
+}
+
+function excerpt(markdown: string): string {
+  const plain = markdown
+    .replace(/^#+\s+.*/gm, "") // remove headings
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1") // [text](url) → text
+    .replace(/[*_`]/g, "") // remove bold/italic/code markers
+    .replace(/\n+/g, " ") // collapse newlines
+    .trim();
+
+  if (plain.length <= 300) return plain;
+
+  // Get beginning, middle, and end snippets
+  const snippetLen = 250;
+
+  // Beginning: first ~60 chars, break at word
+  const beginRaw = plain.slice(0, snippetLen);
+  const beginSpace = beginRaw.lastIndexOf(" ");
+  const begin = beginRaw.slice(0, beginSpace > 20 ? beginSpace : snippetLen);
+
+  // Middle: around the center
+  const midStart = Math.floor(plain.length / 2) - snippetLen / 2;
+  const midRaw = plain.slice(midStart, midStart + snippetLen);
+  const midFirstSpace = midRaw.indexOf(" ");
+  const midLastSpace = midRaw.lastIndexOf(" ");
+  const middle = midRaw.slice(
+    midFirstSpace > 0 ? midFirstSpace + 1 : 0,
+    midLastSpace > midFirstSpace ? midLastSpace : undefined
+  );
+
+  // End: last ~60 chars, break at word
+  const endRaw = plain.slice(-snippetLen);
+  const endSpace = endRaw.indexOf(" ");
+  const end = endRaw.slice(endSpace > 0 ? endSpace + 1 : 0);
+
+  return `${begin} … ${middle} … ${end}`;
 }
 
 function toFrontmatter(data: Record<string, unknown>): string {
@@ -156,114 +179,95 @@ function parseFrontmatter(content: string): {
   return { fm, body: match[2] };
 }
 
-async function list(collection: string) {
-  const config = COLLECTIONS[collection];
-  if (!config) {
-    console.error(`Unknown collection: ${collection}`);
-    console.error(`Available: ${Object.keys(COLLECTIONS).join(", ")}`);
+function today(): string {
+  return new Date().toISOString().split("T")[0];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Commands
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function newTutorial(title: string) {
+  const slug = slugify(title);
+  const filename = `${slug}.md`;
+
+  // Check if file already exists
+  if (await Bun.file(filename).exists()) {
+    console.error(`Error: ${filename} already exists`);
     process.exit(1);
   }
 
-  const gqlPath = config.path
-    .slice(0, -1)
-    .reduceRight((acc, key) => `${key} { ${acc} }`, `items { _id _title }`);
-  const data = await query(`{ ${gqlPath} }`);
-  const items = getNested(data, config.path) as {
-    _id: string;
-    _title: string;
-  }[];
+  console.log(`Creating tutorial: ${title}`);
+  console.log(`  slug: ${slug}`);
 
-  console.log(`\n${collection.toUpperCase()} (${items.length})\n`);
-  for (const item of items) {
-    console.log(`${item._title.padEnd(50)} ${item._id}`);
-  }
-  console.log();
-}
-
-async function fetchItem(id: string): Promise<{
-  name: string;
-  item: Record<string, unknown>;
-  bodyField: string;
-} | null> {
-  for (const [name, config] of Object.entries(COLLECTIONS)) {
-    const metaField = config.metaField || "metaDescription";
-    const gqlPath = config.path
-      .slice(0, -1)
-      .reduceRight(
-        (acc, key) => `${key} { ${acc} }`,
-        `items { _id _title _slug ${metaField} ${config.bodyField} { markdown } }`,
-      );
-
-    try {
-      const data = await query(`{ ${gqlPath} }`);
-      const items = getNested(data, config.path) as Record<string, unknown>[];
-      const item = items.find((i) => i._id === id);
-      if (item) return { name, item, bodyField: config.bodyField };
-    } catch (e) {
-      // Try next collection
-    }
-  }
-  return null;
-}
-
-function itemToMarkdown(
-  name: string,
-  item: Record<string, unknown>,
-  bodyField: string,
-): string {
-  const fm: Record<string, unknown> = {
-    _id: item._id,
-    _collection: name,
-    _title: item._title,
+  // Create BaseHub entry
+  const createData = {
+    type: "instance",
+    title: title,
+    slug: slug,
+    mainComponentId: TUTORIAL_COMPONENT_ID,
+    value: {
+      metaDescription: { type: "text", value: "" },
+      date: { type: "date", value: today() },
+      body: {
+        type: "rich-text",
+        value: { format: "markdown", value: "Write your tutorial here..." },
+      },
+      author: { type: "reference", value: BEN_AUTHOR_ID },
+    },
   };
-  if (item._slug) fm._slug = item._slug;
-  const metaField = (COLLECTIONS[name] as any).metaField || "metaDescription";
-  if (item[metaField]) fm[metaField] = item[metaField];
 
-  const bodyObj = item[bodyField] as { markdown?: string } | undefined;
-  const body = bodyObj?.markdown || "";
+  await mcpCall("tools/call", "create_blocks", {
+    parentId: TUTORIALS_PARENT_ID,
+    data: [createData],
+  });
 
-  return `---\n${toFrontmatter(fm)}\n---\n\n${body}`;
+  // Query for the created tutorial by slug to get its ID
+  const findQuery = `{
+    tutorials {
+      tutorials {
+        items {
+          _id
+          _slug
+        }
+      }
+    }
+  }`;
+
+  const findResult = await query(findQuery);
+  const allItems = (
+    findResult.tutorials as { tutorials: { items: { _id: string; _slug: string }[] } }
+  ).tutorials.items;
+
+  const created = allItems.find((item) => item._slug === slug);
+  if (!created) throw new Error("Created tutorial not found");
+  const createdId = created._id;
+
+  // Create local markdown file
+  const fm = {
+    _id: createdId,
+    _slug: slug,
+    title: title,
+    metaDescription: "",
+    date: today(),
+  };
+
+  const mdContent = `---\n${toFrontmatter(fm)}\n---\n\nWrite your tutorial here...\n`;
+  await Bun.write(filename, mdContent);
+
+  console.log(`\nCreated: ${filename}`);
+  console.log(`BaseHub ID: ${createdId}`);
+  console.log(`\nEdit the file, then run: zocms publish ${filename}`);
 }
 
-async function get(id: string) {
-  const result = await fetchItem(id);
-  if (!result) {
-    console.error(`Item not found: ${id}`);
+async function publish(filepath: string) {
+  const file = Bun.file(filepath);
+  if (!(await file.exists())) {
+    console.error(`Error: ${filepath} not found`);
     process.exit(1);
   }
 
-  const { name, item, bodyField } = result;
-  const title = item._title as string;
-  const filename = `${slugify(title)}.md`;
-
-  await Bun.write(filename, itemToMarkdown(name, item, bodyField));
-  console.log(`Saved: ${filename}`);
-}
-
-async function refresh(filepath: string) {
-  const raw = await Bun.file(filepath).text();
-  const { fm } = parseFrontmatter(raw);
-
-  const id = fm._id as string;
-  if (!id) {
-    console.error("Error: File must have _id in frontmatter");
-    process.exit(1);
-  }
-
-  const result = await fetchItem(id);
-  if (!result) {
-    console.error(`Item not found: ${id}`);
-    process.exit(1);
-  }
-
-  const { name, item, bodyField } = result;
-  await Bun.write(filepath, itemToMarkdown(name, item, bodyField));
-  console.log(`Refreshed: ${filepath}`);
-}
-
-async function push(filepath: string) {
-  const raw = await Bun.file(filepath).text();
+  const raw = await file.text();
   const { fm, body } = parseFrontmatter(raw);
 
   const id = fm._id as string;
@@ -272,73 +276,117 @@ async function push(filepath: string) {
     process.exit(1);
   }
 
-  const collection = fm._collection as string;
-  const config = collection ? COLLECTIONS[collection] : null;
-  const bodyField = config?.bodyField || "body";
+  const title = (fm.title as string) || "Untitled";
+  console.log(`Publishing: ${title}`);
 
-  const value: Record<string, unknown> = {};
-
-  const metaField = (config as any).metaField || "metaDescription";
-  if (fm[metaField]) {
-    value[metaField] = { type: "text", value: fm[metaField] };
-  }
-
-  if (body.trim()) {
-    value[bodyField] = {
-      type: "rich-text",
-      value: { format: "markdown", value: body },
-    };
-  }
-
-  const updateData: Record<string, unknown> = { id, value };
-  if (fm._title) updateData.title = fm._title;
-
-  const title = (fm._title as string) || "content";
-  const commitMsg = `Update ${title}`;
+  const updateData: Record<string, unknown> = {
+    id,
+    title,
+    value: {
+      metaDescription: { type: "text", value: fm.metaDescription || "" },
+      body: {
+        type: "rich-text",
+        value: { format: "markdown", value: body.trim() },
+      },
+    },
+  };
 
   await mcpCall("tools/call", "update_blocks", {
     data: [updateData],
-    autoCommit: commitMsg,
+    autoCommit: `Update ${title}`,
   });
+
   console.log(`Published: ${title}`);
 }
 
-// Get the install directory (where this CLI is installed from)
-function getInstallDir(): string {
-  const scriptPath = import.meta.url.replace("file://", "");
-  return scriptPath.substring(0, scriptPath.lastIndexOf("/"));
-}
+async function deleteTutorial(filepath: string) {
+  const file = Bun.file(filepath);
+  if (!(await file.exists())) {
+    console.error(`Error: ${filepath} not found`);
+    process.exit(1);
+  }
 
-async function update() {
-  const installDir = getInstallDir();
-  console.log(`Updating from: ${installDir}`);
+  const raw = await file.text();
+  const { fm } = parseFrontmatter(raw);
 
-  const proc = Bun.spawn(["sh", "-c", "git pull && bun link"], {
-    cwd: installDir,
-    stdout: "inherit",
-    stderr: "inherit",
+  const id = fm._id as string;
+  if (!id) {
+    console.error("Error: File must have _id in frontmatter");
+    process.exit(1);
+  }
+
+  const title = (fm.title as string) || filepath;
+  console.log(`Deleting: ${title}`);
+
+  // Delete from BaseHub
+  await mcpCall("tools/call", "delete_blocks", {
+    data: [{ id }],
+    autoCommit: `Delete ${title}`,
   });
 
-  const exitCode = await proc.exited;
-  if (exitCode === 0) {
-    console.log("\n✓ Updated successfully!");
-  } else {
-    console.error("\n✗ Update failed");
-    process.exit(1);
+  // Delete local file
+  await Bun.write(filepath, ""); // Clear contents first
+  const fs = await import("fs/promises");
+  await fs.unlink(filepath);
+
+  console.log(`Deleted: ${filepath}`);
+  console.log(`Removed from BaseHub: ${id}`);
+}
+
+async function list() {
+  const gql = `{
+    tutorials {
+      tutorials {
+        items {
+          _id
+          _title
+          _slug
+          body { markdown }
+        }
+      }
+    }
+  }`;
+
+  const data = await query(gql);
+  const items = (
+    data.tutorials as { tutorials: { items: unknown[] } }
+  ).tutorials.items as {
+    _id: string;
+    _title: string;
+    _slug: string;
+    body: { markdown: string };
+  }[];
+
+  console.log(`\nTUTORIALS (${items.length})\n`);
+
+  for (const item of items) {
+    const preview = excerpt(item.body?.markdown || "");
+    console.log(item._title);
+    console.log(`  slug: ${item._slug}`);
+    console.log(`  ${preview}`);
+    console.log();
   }
 }
 
-const HELP = `zocms - BaseHub CLI
+// ─────────────────────────────────────────────────────────────────────────────
+// Main
+// ─────────────────────────────────────────────────────────────────────────────
+
+const HELP = `zocms - Tutorial CLI for zo.computer
 
 Commands:
-  list <collection>   List items (posts, tutorials, use-cases, comparisons, features)
-  get <id>            Download item → slug.md
-  push <file.md>      Push and publish
-  refresh <file.md>   Pull latest (overwrites local)
-  update              Update CLI from source
+  new <title>       Create new tutorial (BaseHub + local .md)
+  publish <file>    Publish local changes to BaseHub
+  delete <file>     Delete from BaseHub + remove local file
+  list              List all tutorials with previews
 
-Requires: export BASEHUB_MCP_TOKEN="..."
-Docs: https://github.com/benguo/zo-basehub
+Examples:
+  zocms new 'How to Do Something Cool'
+  zocms publish how-to-do-something-cool.md
+  zocms delete how-to-do-something-cool.md
+  zocms list
+
+Requires: BASEHUB_MCP_TOKEN in .env or environment
 `;
 
 async function main() {
@@ -346,36 +394,29 @@ async function main() {
   const cmd = args[0];
 
   switch (cmd) {
+    case "new":
+      if (!args[1]) {
+        console.error("Usage: zocms new 'Title'");
+        process.exit(1);
+      }
+      await newTutorial(args[1]);
+      break;
+    case "publish":
+      if (!args[1]) {
+        console.error("Usage: zocms publish <file.md>");
+        process.exit(1);
+      }
+      await publish(args[1]);
+      break;
+    case "delete":
+      if (!args[1]) {
+        console.error("Usage: zocms delete <file.md>");
+        process.exit(1);
+      }
+      await deleteTutorial(args[1]);
+      break;
     case "list":
-      if (!args[1]) {
-        console.error("Usage: zocms list <collection>");
-        process.exit(1);
-      }
-      await list(args[1]);
-      break;
-    case "get":
-      if (!args[1]) {
-        console.error("Usage: zocms get <id>");
-        process.exit(1);
-      }
-      await get(args[1]);
-      break;
-    case "push":
-      if (!args[1]) {
-        console.error("Usage: zocms push <file.md>");
-        process.exit(1);
-      }
-      await push(args[1]);
-      break;
-    case "refresh":
-      if (!args[1]) {
-        console.error("Usage: zocms refresh <file.md>");
-        process.exit(1);
-      }
-      await refresh(args[1]);
-      break;
-    case "update":
-      await update();
+      await list();
       break;
     default:
       console.log(HELP);

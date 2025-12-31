@@ -1,6 +1,6 @@
 # zocms
 
-CLI for managing BaseHub CMS content.
+CLI for creating and managing zo.computer tutorials.
 
 ## Installation
 
@@ -24,6 +24,11 @@ bun build --compile ./zocms.ts --outfile /usr/local/bin/zocms
 cp ~/Integrations/zocms/zocms.prompt.md ~/Prompts/
 ```
 
+4. Set your BaseHub token in Settings > Developers:
+```
+BASEHUB_MCP_TOKEN=bshb_mcp_...
+```
+
 ## Updating
 
 ```bash
@@ -36,46 +41,37 @@ bun build --compile ./zocms.ts --outfile /usr/local/bin/zocms
 
 | Command | Description |
 |---------|-------------|
-| `zocms list <collection>` | List items as: title \| id |
-| `zocms get <id>` | Download item → `slug.md` |
-| `zocms push <file.md>` | Push and publish directly |
-| `zocms refresh <file.md>` | Pull published version (overwrites local) |
-| `zocms update` | Update CLI to latest version |
-
-## Collections
-
-- `posts` - Blog posts
-- `tutorials` - Tutorials
-- `use-cases` - Use cases
-- `comparisons` - Comparisons
-- `features` - Features
+| `zocms new 'Title'` | Create new tutorial (BaseHub + local .md) |
+| `zocms publish <file.md>` | Publish local changes to BaseHub |
+| `zocms delete <file.md>` | Delete from BaseHub + remove local file |
+| `zocms list` | List all tutorials with previews |
 
 ## Workflow
 
 ```bash
-# Find the post you want to edit
-zocms list posts
-
-# Download it
-zocms get abc123   # saves as e.g. personal-ai.md
-
-# Pull latest from BaseHub before editing
-zocms refresh personal-ai.md
+# Create a new tutorial
+zocms new 'How to Do Something Cool'
+# → creates how-to-do-something-cool.md
 
 # Edit the markdown...
 
-# Push changes back
-zocms push personal-ai.md
+# Publish to BaseHub
+zocms publish how-to-do-something-cool.md
+
+# See all tutorials
+zocms list
+
+# Delete a tutorial
+zocms delete how-to-do-something-cool.md
 ```
 
 ## Using with Zo
 
 Once the prompt tool is installed, you can use natural language:
 
-> "List all blog posts"
-> "Pull the latest version of the personal-ai post"
-> "Push my changes to the features article"
+> "Create a new tutorial called 'How to Set Up Redis'"
+> "Publish my redis tutorial"
+> "List all tutorials"
+> "Delete the redis tutorial"
 
 Zo will use the zocms CLI automatically.
-
-
