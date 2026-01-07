@@ -45,6 +45,7 @@ bun build --compile ./zocms.ts --outfile /usr/local/bin/zocms
 | `zocms download <id>` | Download item to .cms.md |
 | `zocms publish <file.cms.md>` | Publish changes |
 | `zocms delete <file.cms.md>` | Delete item |
+| `zocms upload <image>` | Upload image to CDN |
 | `zocms list [collection]` | List items |
 
 ## Collections
@@ -60,14 +61,6 @@ bun build --compile ./zocms.ts --outfile /usr/local/bin/zocms
 zocms new post 'My New Blog Post'
 # → creates my-new-blog-post.cms.md
 
-# Create a tutorial
-zocms new tutorial 'How to Do Something'
-# → creates how-to-do-something.cms.md
-
-# Create an update
-zocms new update 'December Update'
-# → creates 2025-12-31.cms.md (uses date as filename)
-
 # Edit the markdown locally...
 
 # Publish to BaseHub
@@ -75,16 +68,34 @@ zocms publish my-new-blog-post.cms.md
 
 # Download existing content by ID
 zocms download W6LnUCR5lMT5qdewK8QEi
-# → downloads to personal-computing.cms.md
 
 # List all content
 zocms list
 
-# List only tutorials
-zocms list tutorials
-
 # Delete an item
 zocms delete my-new-blog-post.cms.md
+```
+
+## Cover Images
+
+Upload images and add them to posts/tutorials:
+
+```bash
+# Option 1: Upload first, then add URL to frontmatter
+zocms upload ~/Downloads/cover.png
+# → Outputs URL to use in frontmatter
+
+# Option 2: Add local path to frontmatter (auto-uploads on publish)
+```
+
+In your `.cms.md` file:
+```yaml
+---
+title: "My Post"
+coverImage: "/path/to/local/image.png"  # Auto-uploads on publish
+# or
+coverImage: "https://assets.basehub.com/..."  # Already uploaded
+---
 ```
 
 ## File Pattern
@@ -99,7 +110,7 @@ All CMS-managed files use the `.cms.md` suffix, making it easy to:
 Once the prompt tool is installed, you can use natural language:
 
 > "Create a new blog post called 'My Ideas'"
-> "Download the personal computing post"
+> "Upload ~/Downloads/cover.png and add it to my post"
 > "List all tutorials"
 > "Publish my-post.cms.md"
 

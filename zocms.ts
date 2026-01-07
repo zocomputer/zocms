@@ -115,6 +115,54 @@ async function query(gql: string, draft = true): Promise<Record<string, unknown>
   return parsed;
 }
 
+async function getUploadUrl(fileName: string): Promise<{ url: string; uploadUrl: string }> {
+  const result = (await mcpCall("tools/call", "get_upload_url", {
+    fileName,
+  })) as { content: { text: string }[] };
+  
+  // Combine all text content
+  const allText = result.content?.map(c => c.text).join("\n") || "";
+  
+  // Parse: "Upload URL: https://assets.basehub.com/..."
+  const urlMatch = allText.match(/Upload URL: (https:\/\/[^\s]+)/);
+  // Parse: curl command to get upload endpoint
+  const uploadMatch = allText.match(/curl -X PUT --data-binary @[^\s]+ (https:\/\/[^\s`]+)/);
+  
+  if (!urlMatch) throw new Error("Could not parse upload URL from: " + allText.slice(0, 200));
+  
+  return {
+    url: urlMatch[1],
+    uploadUrl: uploadMatch ? uploadMatch[1] : "",
+  };
+}
+
+async function uploadFile(localPath: string): Promise<string> {
+  const file = Bun.file(localPath);
+  if (!(await file.exists())) {
+    throw new Error(`File not found: ${localPath}`);
+  }
+
+  const fileName = localPath.split("/").pop() || "image.png";
+  const { url, uploadUrl } = await getUploadUrl(fileName);
+
+  if (!uploadUrl) {
+    throw new Error("Could not get upload URL");
+  }
+
+  // Read file and upload
+  const fileData = await file.arrayBuffer();
+  const res = await fetch(uploadUrl, {
+    method: "PUT",
+    body: fileData,
+  });
+
+  if (!res.ok) {
+    throw new Error(`Upload failed: ${res.status} ${res.statusText}`);
+  }
+
+  return url;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Utilities
 // ─────────────────────────────────────────────────────────────────────────────
@@ -381,7 +429,9 @@ async function download(id: string) {
   for (const [collectionName, config] of Object.entries(COLLECTIONS)) {
     const queryPath = config.path.slice(0, -1);
     const metaFields = config.metaField ? `${config.metaField}` : "";
-    const fields = `_id _title ${config.hasSlug ? "_slug" : ""} date ${metaFields} ${config.bodyField} { markdown }`;
+    // Include coverImage in query for posts/tutorials
+    const coverImageField = collectionName !== "updates" ? "coverImage { url }" : "";
+    const fields = `_id _title ${config.hasSlug ? "_slug" : ""} date ${metaFields} ${coverImageField} ${config.bodyField} { markdown }`;
 
     const gqlPath = queryPath.reduceRight(
       (acc, key) => `${key} { ${acc} }`,
@@ -412,6 +462,12 @@ async function download(id: string) {
         if (item.date) fm.date = item.date;
         if (config.metaField && item[config.metaField]) {
           fm[config.metaField] = item[config.metaField];
+        }
+
+        // Handle cover image
+        const coverImage = item.coverImage as { url?: string } | undefined;
+        if (coverImage?.url) {
+          fm.coverImage = coverImage.url;
         }
 
         // Handle posts tags
@@ -460,6 +516,14 @@ async function publish(filepath: string) {
   const title = (fm.title as string) || "Untitled";
   console.log(`Publishing: ${title}`);
 
+  // Handle coverImage - upload if local path
+  let coverImageUrl = fm.coverImage as string | undefined;
+  if (coverImageUrl && !coverImageUrl.startsWith("http")) {
+    console.log(`Uploading cover image: ${coverImageUrl}`);
+    coverImageUrl = await uploadFile(coverImageUrl);
+    console.log(`  → ${coverImageUrl}`);
+  }
+
   // Build update value based on collection
   const value: Record<string, unknown> = {
     [config?.bodyField || "body"]: {
@@ -467,6 +531,11 @@ async function publish(filepath: string) {
       value: { format: "markdown", value: body.trim() },
     },
   };
+
+  // Add cover image if present
+  if (coverImageUrl) {
+    value.coverImage = { type: "media", value: { url: coverImageUrl } };
+  }
 
   // Add meta field if present
   if (config?.metaField && fm[config.metaField] !== undefined) {
@@ -496,6 +565,14 @@ async function publish(filepath: string) {
   });
 
   console.log(`Published: ${title}`);
+}
+
+async function upload(localPath: string) {
+  console.log(`Uploading: ${localPath}`);
+  const url = await uploadFile(localPath);
+  console.log(`\nUploaded: ${url}`);
+  console.log(`\nUse this URL in your frontmatter:`);
+  console.log(`coverImage: "${url}"`);
 }
 
 async function deleteItem(filepath: string) {
@@ -587,6 +664,7 @@ Commands:
   download <id>              Download item by ID to .cms.md file
   publish <file>             Publish local changes to BaseHub
   delete <file>              Delete from BaseHub + remove local file
+  upload <image>             Upload image to BaseHub CDN
   list [collection]          List items (optionally filter by collection)
 
 Collections:
@@ -594,13 +672,16 @@ Collections:
   tutorials  - How-to tutorials
   updates    - Product updates
 
+Cover Images:
+  Add to frontmatter:
+    coverImage: "/path/to/local/image.png"   (auto-uploads on publish)
+    coverImage: "https://..."                (uses existing URL)
+
 Examples:
   zocms new post 'My New Blog Post'
   zocms new tutorial 'How to Do Something'
-  zocms new update 'December Update'
-  zocms download W6LnUCR5lMT5qdewK8QEi
+  zocms upload ~/Downloads/cover.png
   zocms publish my-post.cms.md
-  zocms list
   zocms list posts
 
 Requires: BASEHUB_MCP_TOKEN in .env or environment
@@ -639,6 +720,13 @@ async function main() {
         process.exit(1);
       }
       await deleteItem(args[1]);
+      break;
+    case "upload":
+      if (!args[1]) {
+        console.error("Usage: zocms upload <image-path>");
+        process.exit(1);
+      }
+      await upload(args[1]);
       break;
     case "list":
       await list(args[1]);

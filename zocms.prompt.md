@@ -17,6 +17,7 @@ Manage posts, tutorials, and updates for zo.computer.
 | `zocms download <id>` | Download to .cms.md |
 | `zocms publish <file.cms.md>` | Publish changes |
 | `zocms delete <file.cms.md>` | Delete item |
+| `zocms upload <image>` | Upload image to CDN |
 | `zocms list [collection]` | List items |
 
 ## Collections
@@ -25,11 +26,16 @@ Manage posts, tutorials, and updates for zo.computer.
 - `tutorials` - How-to tutorials
 - `updates` - Product updates
 
+## Cover Images
+
+Add `coverImage` to frontmatter:
+- Local path: `coverImage: "/path/to/image.png"` (auto-uploads on publish)
+- URL: `coverImage: "https://assets.basehub.com/..."` (already uploaded)
+
 ## Examples
 
 - "Create a new blog post called 'My Ideas'" → `zocms new post 'My Ideas'`
-- "Create a tutorial about Redis" → `zocms new tutorial 'How to Set Up Redis'`
-- "Download the personal computing post" → `zocms download W6LnUCR5lMT5qdewK8QEi`
+- "Upload cover.png" → `zocms upload ~/Downloads/cover.png`
 - "List all tutorials" → `zocms list tutorials`
 - "Publish my-post.cms.md" → `zocms publish my-post.cms.md`
 
