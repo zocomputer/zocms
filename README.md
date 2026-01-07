@@ -1,6 +1,6 @@
 # zocms
 
-CLI for creating and managing zo.computer tutorials.
+CLI for managing zo.computer content (posts, tutorials, updates).
 
 ## Installation
 
@@ -41,37 +41,66 @@ bun build --compile ./zocms.ts --outfile /usr/local/bin/zocms
 
 | Command | Description |
 |---------|-------------|
-| `zocms new 'Title'` | Create new tutorial (BaseHub + local .md) |
-| `zocms publish <file.md>` | Publish local changes to BaseHub |
-| `zocms delete <file.md>` | Delete from BaseHub + remove local file |
-| `zocms list` | List all tutorials with previews |
+| `zocms new <collection> 'Title'` | Create new item |
+| `zocms download <id>` | Download item to .cms.md |
+| `zocms publish <file.cms.md>` | Publish changes |
+| `zocms delete <file.cms.md>` | Delete item |
+| `zocms list [collection]` | List items |
+
+## Collections
+
+- `posts` - Blog posts
+- `tutorials` - How-to tutorials
+- `updates` - Product updates
 
 ## Workflow
 
 ```bash
-# Create a new tutorial
-zocms new 'How to Do Something Cool'
-# → creates how-to-do-something-cool.md
+# Create a new post
+zocms new post 'My New Blog Post'
+# → creates my-new-blog-post.cms.md
 
-# Edit the markdown...
+# Create a tutorial
+zocms new tutorial 'How to Do Something'
+# → creates how-to-do-something.cms.md
+
+# Create an update
+zocms new update 'December Update'
+# → creates 2025-12-31.cms.md (uses date as filename)
+
+# Edit the markdown locally...
 
 # Publish to BaseHub
-zocms publish how-to-do-something-cool.md
+zocms publish my-new-blog-post.cms.md
 
-# See all tutorials
+# Download existing content by ID
+zocms download W6LnUCR5lMT5qdewK8QEi
+# → downloads to personal-computing.cms.md
+
+# List all content
 zocms list
 
-# Delete a tutorial
-zocms delete how-to-do-something-cool.md
+# List only tutorials
+zocms list tutorials
+
+# Delete an item
+zocms delete my-new-blog-post.cms.md
 ```
+
+## File Pattern
+
+All CMS-managed files use the `.cms.md` suffix, making it easy to:
+- Filter with `ls *.cms.md` or `git status *.cms.md`
+- Add to `.gitignore` if desired: `*.cms.md`
+- Distinguish from regular markdown files
 
 ## Using with Zo
 
 Once the prompt tool is installed, you can use natural language:
 
-> "Create a new tutorial called 'How to Set Up Redis'"
-> "Publish my redis tutorial"
+> "Create a new blog post called 'My Ideas'"
+> "Download the personal computing post"
 > "List all tutorials"
-> "Delete the redis tutorial"
+> "Publish my-post.cms.md"
 
 Zo will use the zocms CLI automatically.

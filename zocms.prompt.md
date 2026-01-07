@@ -1,29 +1,41 @@
 ---
-title: Tutorial CLI (zocms)
-description: Create and manage zo.computer tutorials using the zocms CLI.
+title: Content CLI (zocms)
+description: Create and manage zo.computer content using the zocms CLI.
 tags:
   - cms
-  - tutorials
   - content
 tool: true
 ---
 
-Use this prompt to create and manage tutorials for zo.computer.
+Manage posts, tutorials, and updates for zo.computer.
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
-| `zocms new 'Title'` | Create new tutorial |
-| `zocms publish <file.md>` | Publish to BaseHub |
-| `zocms delete <file.md>` | Delete tutorial |
-| `zocms list` | List all tutorials |
+| `zocms new <collection> 'Title'` | Create new item |
+| `zocms download <id>` | Download to .cms.md |
+| `zocms publish <file.cms.md>` | Publish changes |
+| `zocms delete <file.cms.md>` | Delete item |
+| `zocms list [collection]` | List items |
 
-## Workflow
+## Collections
 
-1. **Create** a new tutorial: `zocms new 'How to Do Something'`
-2. **Edit** the generated markdown file
-3. **Publish** changes: `zocms publish how-to-do-something.md`
+- `posts` - Blog posts
+- `tutorials` - How-to tutorials
+- `updates` - Product updates
+
+## Examples
+
+- "Create a new blog post called 'My Ideas'" → `zocms new post 'My Ideas'`
+- "Create a tutorial about Redis" → `zocms new tutorial 'How to Set Up Redis'`
+- "Download the personal computing post" → `zocms download W6LnUCR5lMT5qdewK8QEi`
+- "List all tutorials" → `zocms list tutorials`
+- "Publish my-post.cms.md" → `zocms publish my-post.cms.md`
+
+## File Pattern
+
+CMS files use `.cms.md` suffix for easy filtering (e.g., `ls *.cms.md`).
 
 ## Setup
 
